@@ -8,19 +8,22 @@ export class Game {
     this.sequence.push(Math.floor(Math.random() * 9))
   }
 
-  showSequence(highlight: (idx: number, color: number) => void, onComplete: () => void) {
+  showSequence(highlight: (idx: number, color: number, duration?: number) => void, onComplete: () => void) {
     this.gameState = 'showing'
-    this.sequence.forEach((_idx, i) => {
-      const idx = this.sequence[i]
+
+    // Show each cube in sequence with better timing
+    this.sequence.forEach((idx, i) => {
       setTimeout(() => {
-        highlight(idx, 0xffff00)
-        setTimeout(() => highlight(idx, 0x00ff00), 500)
-      }, i * 1000)
+        // Highlight with bright yellow for sequence display
+        highlight(idx, 0xffd700, 600) // Gold color for sequence
+      }, i * 800) // Slightly faster pace
     })
+
+    // Wait for all highlights to complete, then switch to input mode
     setTimeout(() => {
       this.gameState = 'input'
       onComplete()
-    }, this.sequence.length * 1000 + 500)
+    }, this.sequence.length * 800 + 800)
   }
 
   checkClick(index: number): 'correct' | 'wrong' | 'complete' {
