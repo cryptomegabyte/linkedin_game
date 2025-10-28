@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint src --ext .ts",
+    "test": "vitest",
     "preview": "vite preview"
   },
   "devDependencies": {
@@ -14,8 +15,10 @@
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
     "eslint": "^9.38.0",
+    "jsdom": "^27.0.1",
     "typescript": "~5.9.3",
-    "vite": "^7.1.7"
+    "vite": "^7.1.7",
+    "vitest": "^4.0.4"
   },
   "dependencies": {
     "three": "^0.180.0"
