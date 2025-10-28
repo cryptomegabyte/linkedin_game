@@ -413,12 +413,6 @@ body {
   text-align: center;
 }
 
-.challenges-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
 .challenge-item {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);

@@ -87,7 +87,7 @@ export class DailyChallengeManager {
     // Remove expired challenges
     this.challenges = this.challenges.filter(c => c.expiresAt >= today)
 
-    // Generate 3 new challenges for today
+    // Generate 1 random challenge for today
     const challengeTemplates = [
       {
         title: "Score Sprint",
@@ -121,8 +121,22 @@ export class DailyChallengeManager {
       }
     ]
 
-    // Randomly select 3 challenges
-    const selectedTemplates = this.shuffleArray(challengeTemplates).slice(0, 3)
+    // Randomly select 1 challenge
+    const selectedTemplates = this.shuffleArray(challengeTemplates).slice(0, 1)
+
+    selectedTemplates.forEach((template, index) => {
+      const challenge: DailyChallenge = {
+        id: `daily_${Date.now()}_${index}`,
+        title: template.title,
+        description: template.description.replace('{target}', template.objective.target.toString()),
+        objective: template.objective,
+        reward: template.reward,
+        expiresAt: tomorrow,
+        completed: false,
+        progress: 0
+      }
+      this.challenges.push(challenge)
+    })
 
     selectedTemplates.forEach((template, index) => {
       const challenge: DailyChallenge = {

@@ -125,9 +125,9 @@ app.innerHTML = `
     </div>
 
     <div class="daily-challenges" id="daily-challenges">
-      <h3 class="challenges-title">🎯 Daily Challenges</h3>
+      <h3 class="challenges-title">🎯 Daily Challenge</h3>
       <div class="challenges-list" id="challenges-list">
-        <!-- Challenges will be populated here -->
+        <!-- Challenge will be populated here -->
       </div>
     </div>
 
@@ -297,24 +297,24 @@ function updateDailyChallenges() {
   const activeChallenges = dailyChallengeManager.getActiveChallenges()
 
   if (activeChallenges.length === 0) {
-    challengesList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); font-size: 0.875rem; margin: 1rem 0;">All daily challenges completed! 🎉</p>'
+    challengesList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); font-size: 0.875rem; margin: 1rem 0;">Daily challenge completed! 🎉<br>Come back tomorrow for a new one!</p>'
     return
   }
 
-  challengesList.innerHTML = activeChallenges.map(challenge => {
-    const isCompleted = challenge.completed
+  // Display the single daily challenge
+  const challenge = activeChallenges[0]
+  const isCompleted = challenge.completed
 
-    return `
-      <div class="challenge-item ${isCompleted ? 'completed' : ''}">
-        <div class="challenge-icon">${getChallengeIcon(challenge.objective.type)}</div>
-        <div class="challenge-content">
-          <div class="challenge-title">${challenge.title}</div>
-          <div class="challenge-desc">${challenge.description}</div>
-          <div class="challenge-progress">${challenge.progress}/${challenge.objective.target}</div>
-        </div>
+  challengesList.innerHTML = `
+    <div class="challenge-item ${isCompleted ? 'completed' : ''}">
+      <div class="challenge-icon">${getChallengeIcon(challenge.objective.type)}</div>
+      <div class="challenge-content">
+        <div class="challenge-title">${challenge.title}</div>
+        <div class="challenge-desc">${challenge.description}</div>
+        <div class="challenge-progress">${challenge.progress}/${challenge.objective.target}</div>
       </div>
-    `
-  }).join('')
+    </div>
+  `
 }
 
 function getChallengeIcon(type: string): string {
