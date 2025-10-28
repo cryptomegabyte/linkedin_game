@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { Game } from './game'
 import { SoundManager } from './sound'
 import { AchievementManager, type Achievement } from './achievements'
+import { ParticleSystem } from './particles'
 
 // Create scene
 const scene = new THREE.Scene()
@@ -11,25 +12,65 @@ const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
 camera.position.z = 5
 
-// Create renderer
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+// Create renderer with better settings
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  alpha: true,
+  powerPreference: "high-performance"
+})
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.setClearColor(0x000000, 0) // transparent background
+renderer.shadowMap.enabled = true
+renderer.shadowMap.type = THREE.PCFSoftShadowMap
 
-// Create geometry and material with professional colors
-const geometry = new THREE.BoxGeometry(1, 1, 1)
-const material = new THREE.MeshBasicMaterial({
-  color: 0x0077b5, // LinkedIn blue
-  transparent: true,
-  opacity: 0.9
-})
+// Add lighting to the scene
+const ambientLight = new THREE.AmbientLight(0x404040, 0.6)
+scene.add(ambientLight)
 
-// Create 3x3 grid of cubes
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+directionalLight.position.set(5, 5, 5)
+directionalLight.castShadow = true
+directionalLight.shadow.mapSize.width = 2048
+directionalLight.shadow.mapSize.height = 2048
+scene.add(directionalLight)
+
+const pointLight = new THREE.PointLight(0x0077b5, 0.5, 10)
+pointLight.position.set(0, 0, 3)
+scene.add(pointLight)
+
+// Create enhanced geometry with rounded edges effect
+const geometry = new THREE.BoxGeometry(1, 1, 1, 8, 8, 8) // More segments for smoother look
+
+// Create different materials for different states
+const createCubeMaterial = (baseColor: number, emissiveColor: number = 0x000000, emissiveIntensity: number = 0) => {
+  return new THREE.MeshPhongMaterial({
+    color: baseColor,
+    emissive: emissiveColor,
+    emissiveIntensity: emissiveIntensity,
+    transparent: true,
+    opacity: 0.95,
+    shininess: 100,
+    specular: 0x111111,
+    side: THREE.DoubleSide
+  })
+}
+
+// Base material for normal state
+const normalMaterial = createCubeMaterial(0x0077b5)
+
+// Create 3x3 grid of cubes with enhanced materials
 const cubes: THREE.Mesh[] = []
 for (let i = 0; i < 3; i++) {
   for (let j = 0; j < 3; j++) {
-    const cube = new THREE.Mesh(geometry, material.clone())
+    const cube = new THREE.Mesh(geometry, normalMaterial.clone())
     cube.position.set((i - 1) * 1.5, (j - 1) * 1.5, 0)
+    cube.castShadow = true
+    cube.receiveShadow = true
+
+    // Add subtle random rotation for visual interest
+    cube.rotation.x = (Math.random() - 0.5) * 0.1
+    cube.rotation.y = (Math.random() - 0.5) * 0.1
+
     cubes.push(cube)
     scene.add(cube)
   }
@@ -48,6 +89,9 @@ const soundManager = new SoundManager()
 
 // Achievement system
 const achievementManager = new AchievementManager()
+
+// Particle system for visual effects
+const particleSystem = new ParticleSystem(scene)
 
 // Create professional UI
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -116,6 +160,10 @@ const soundBtn = document.getElementById('sound-btn')!
 
 // Achievement notification system
 function showAchievementNotification(achievement: Achievement) {
+  // Create particle burst for achievement
+  const centerPosition = new THREE.Vector3(0, 0, 0)
+  particleSystem.createBurst(centerPosition, 0xffd700, 12)
+
   // Create notification element
   const notification = document.createElement('div')
   notification.className = 'achievement-notification'
@@ -186,11 +234,13 @@ function updateUI() {
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
-// Highlight cube function with better colors and animations
+// Highlight cube function with enhanced visuals and glow effects
 function highlightCube(index: number, color: number, duration: number = 500) {
   const cube = cubes[index]
-  const material = cube.material as THREE.MeshBasicMaterial
+  const material = cube.material as THREE.MeshPhongMaterial
   const originalColor = material.color.getHex()
+  const originalEmissive = material.emissive.getHex()
+  const originalEmissiveIntensity = material.emissiveIntensity
   const originalScale = cube.scale.clone()
 
   // Play sequence sound when showing pattern
@@ -198,13 +248,33 @@ function highlightCube(index: number, color: number, duration: number = 500) {
     soundManager.playSequence()
   }
 
-  // Animate scale and color
-  material.color.setHex(color)
-  cube.scale.setScalar(1.2)
+  // Enhanced visual effects based on state
+  if (color === 0xffd700) {
+    // Sequence display: gold with glow and particles
+    material.color.setHex(0xffd700)
+    material.emissive.setHex(0xffd700)
+    material.emissiveIntensity = 0.3
+    cube.scale.setScalar(1.3)
+    particleSystem.createBurst(cube.position, 0xffd700, 6)
+  } else if (color === 0x42a5f5) {
+    // Player click: light blue with subtle glow and particles
+    material.color.setHex(0x42a5f5)
+    material.emissive.setHex(0x42a5f5)
+    material.emissiveIntensity = 0.2
+    cube.scale.setScalar(1.25)
+    particleSystem.createBurst(cube.position, 0x42a5f5, 4)
+  } else {
+    // Default highlight
+    material.color.setHex(color)
+    cube.scale.setScalar(1.2)
+  }
 
   if (duration > 0) {
     setTimeout(() => {
+      // Reset to original state with smooth transition
       material.color.setHex(originalColor)
+      material.emissive.setHex(originalEmissive)
+      material.emissiveIntensity = originalEmissiveIntensity
       cube.scale.copy(originalScale)
     }, duration)
   }
@@ -339,18 +409,42 @@ cubes.forEach((cube, index) => {
   }
 })
 
-// Animation loop with floating effect
+// Animation loop with enhanced visual effects
 function animate() {
   requestAnimationFrame(animate)
 
-  // Add subtle floating animation to cubes
+  const time = Date.now() * 0.001 // Convert to seconds
+
+  // Enhanced floating and breathing animation for cubes
   cubes.forEach((cube, index) => {
     const anim = cubeAnimations[index]
-    anim.time += 0.02
-    cube.position.y = anim.baseY + Math.sin(anim.time) * 0.05
-    cube.rotation.x += 0.005
-    cube.rotation.y += 0.005
+
+    // Floating motion
+    anim.time += 0.015
+    cube.position.y = anim.baseY + Math.sin(anim.time) * 0.08
+
+    // Gentle rotation
+    cube.rotation.x = Math.sin(time * 0.5 + index) * 0.05
+    cube.rotation.y += 0.003
+
+    // Subtle breathing effect (scale pulsing)
+    const breathScale = 1 + Math.sin(time * 2 + index * 0.5) * 0.02
+    cube.scale.setScalar(breathScale)
+
+    // Dynamic emissive intensity for ambient glow
+    const material = cube.material as THREE.MeshPhongMaterial
+    material.emissiveIntensity = 0.05 + Math.sin(time * 1.5 + index) * 0.02
   })
+
+  // Animate point light for dynamic lighting
+  if (pointLight) {
+    pointLight.position.x = Math.sin(time * 0.5) * 2
+    pointLight.position.y = Math.cos(time * 0.3) * 1
+    pointLight.intensity = 0.5 + Math.sin(time * 0.8) * 0.1
+  }
+
+  // Update particle system
+  particleSystem.update()
 
   renderer.render(scene, camera)
 }
