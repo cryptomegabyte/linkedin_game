@@ -2,7 +2,7 @@
 
 A modern, addictive memory game built with TypeScript, Vite, and Three.js, featuring professional UI design inspired by LinkedIn.
 
-<img src="./game_image.png" width="40%" alt="Game Screenshot">
+<img src="./game_image.png" width="40%" alt="Game Screenshot" style="display: block; margin: 0 auto;">
 
 ## Features
 
