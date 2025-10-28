@@ -1,6 +1,8 @@
 import './style.css'
 import * as THREE from 'three'
 import { Game } from './game'
+import { SoundManager } from './sound'
+import { AchievementManager, type Achievement } from './achievements'
 
 // Create scene
 const scene = new THREE.Scene()
@@ -38,6 +40,14 @@ const game = new Game()
 // Game state
 let highScore = 0
 let currentScore = 0
+let currentCombo = 0
+let maxCombo = 0
+
+// Sound system
+const soundManager = new SoundManager()
+
+// Achievement system
+const achievementManager = new AchievementManager()
 
 // Create professional UI
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -58,6 +68,10 @@ app.innerHTML = `
         <div class="stat-value" id="score">0</div>
       </div>
       <div class="stat-item">
+        <div class="stat-label">Combo</div>
+        <div class="stat-value" id="combo">0</div>
+      </div>
+      <div class="stat-item">
         <div class="stat-label">Best</div>
         <div class="stat-value" id="high-score">${highScore}</div>
       </div>
@@ -74,6 +88,7 @@ app.innerHTML = `
     <div class="game-controls">
       <button class="game-button" id="start-btn">Start Game</button>
       <button class="game-button secondary" id="restart-btn" style="display: none;">Restart</button>
+      <button class="game-button secondary" id="sound-btn">🔊 Sound</button>
     </div>
 
     <div class="game-instructions">
@@ -93,14 +108,48 @@ canvasWrapper.appendChild(renderer.domElement)
 // Get UI elements
 const levelElement = document.getElementById('level')!
 const scoreElement = document.getElementById('score')!
+const comboElement = document.getElementById('combo')!
 const statusElement = document.getElementById('status')!
 const startBtn = document.getElementById('start-btn')!
 const restartBtn = document.getElementById('restart-btn')!
+const soundBtn = document.getElementById('sound-btn')!
+
+// Achievement notification system
+function showAchievementNotification(achievement: Achievement) {
+  // Create notification element
+  const notification = document.createElement('div')
+  notification.className = 'achievement-notification'
+  notification.innerHTML = `
+    <div class="achievement-icon">${achievement.icon}</div>
+    <div class="achievement-content">
+      <div class="achievement-title">Achievement Unlocked!</div>
+      <div class="achievement-name">${achievement.title}</div>
+      <div class="achievement-desc">${achievement.description}</div>
+    </div>
+  `
+
+  // Add to DOM
+  document.body.appendChild(notification)
+
+  // Animate in
+  setTimeout(() => notification.classList.add('show'), 100)
+
+  // Remove after 4 seconds
+  setTimeout(() => {
+    notification.classList.remove('show')
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification)
+      }
+    }, 300)
+  }, 4000)
+}
 
 // Update UI
 function updateUI() {
   levelElement.textContent = game.level.toString()
   scoreElement.textContent = currentScore.toString()
+  comboElement.textContent = currentCombo.toString()
 
   // Update high score display if we have it
   const highScoreElement = document.getElementById('high-score')
@@ -144,6 +193,11 @@ function highlightCube(index: number, color: number, duration: number = 500) {
   const originalColor = material.color.getHex()
   const originalScale = cube.scale.clone()
 
+  // Play sequence sound when showing pattern
+  if (color === 0xffd700) { // Gold color for sequence
+    soundManager.playSequence()
+  }
+
   // Animate scale and color
   material.color.setHex(color)
   cube.scale.setScalar(1.2)
@@ -181,6 +235,18 @@ function onMouseClick(event: MouseEvent) {
     const result = game.checkClick(index)
 
     if (result === 'wrong') {
+      // Play wrong sound and reset combo
+      soundManager.playWrong()
+      currentCombo = 0
+
+      // Update achievements
+      achievementManager.updateStats({
+        gamesPlayed: achievementManager.getStats().gamesPlayed + 1,
+        maxLevel: Math.max(achievementManager.getStats().maxLevel, game.level - 1),
+        maxCombo: Math.max(achievementManager.getStats().maxCombo, maxCombo),
+        currentStreak: 0 // Reset streak on loss
+      })
+
       // Update high score if needed
       if (currentScore > highScore) {
         highScore = currentScore
@@ -199,17 +265,51 @@ function onMouseClick(event: MouseEvent) {
         showStartScreen()
       }, 3000)
     } else if (result === 'complete') {
-      currentScore = game.level - 1
-      statusElement.textContent = `Level ${game.level} complete!`
+      // Play success sound and increase combo
+      soundManager.playSuccess()
+      currentCombo++
+      maxCombo = Math.max(maxCombo, currentCombo)
+
+      // Calculate score with combo multiplier
+      const baseScore = game.level
+      const comboMultiplier = Math.min(currentCombo, 5) // Cap at 5x multiplier
+      const levelScore = baseScore * comboMultiplier
+      currentScore += levelScore
+
+      // Check for newly unlocked achievements
+      const newAchievements = achievementManager.updateStats({
+        maxLevel: Math.max(achievementManager.getStats().maxLevel, game.level),
+        maxCombo: Math.max(achievementManager.getStats().maxCombo, maxCombo)
+      })
+
+      // Show achievement notification if any were unlocked
+      if (newAchievements.length > 0) {
+        soundManager.playAchievement()
+        setTimeout(() => {
+          showAchievementNotification(newAchievements[0])
+        }, 500)
+      }
+
+      statusElement.textContent = `Level ${game.level} complete! +${levelScore}pts${comboMultiplier > 1 ? ` (${comboMultiplier}x combo!)` : ''}`
       statusElement.className = 'status-text'
       statusElement.style.background = 'linear-gradient(135deg, #28a745, #20c997)'
       statusElement.style.color = 'white'
       statusElement.style.borderColor = '#28a745'
 
+      // Special combo celebration
+      if (currentCombo >= 3) {
+        soundManager.playCombo()
+      }
+
       setTimeout(() => {
         updateUI()
         startGame()
       }, 1500)
+    } else if (result === 'correct') {
+      // Play correct sound and maintain combo
+      soundManager.playCorrect()
+      currentCombo++
+      maxCombo = Math.max(maxCombo, currentCombo)
     }
   }
 }
@@ -218,6 +318,7 @@ function onMouseClick(event: MouseEvent) {
 function startGame() {
   startBtn.style.display = 'none'
   restartBtn.style.display = 'inline-block'
+  currentCombo = 0 // Reset combo for new game
   game.startGame(highlightCube, () => updateUI())
 }
 
@@ -225,6 +326,7 @@ function startGame() {
 function showStartScreen() {
   startBtn.style.display = 'inline-block'
   restartBtn.style.display = 'none'
+  currentCombo = 0 // Reset combo
   updateUI()
 }
 
@@ -260,8 +362,15 @@ renderer.domElement.addEventListener('click', onMouseClick)
 startBtn.addEventListener('click', startGame)
 restartBtn.addEventListener('click', () => {
   game.reset()
+  currentScore = 0
+  currentCombo = 0
   updateUI()
   startGame()
+})
+
+soundBtn.addEventListener('click', () => {
+  soundManager.toggleSound()
+  soundBtn.textContent = soundManager.isEnabled() ? '🔊 Sound' : '🔇 Muted'
 })
 
 // Handle window resize
