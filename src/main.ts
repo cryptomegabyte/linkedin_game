@@ -4,6 +4,7 @@ import { Game } from './game'
 import { SoundManager } from './sound'
 import { AchievementManager, type Achievement } from './achievements'
 import { ParticleSystem } from './particles'
+import { DailyChallengeManager, type DailyChallenge } from './daily-challenges'
 
 // Create scene
 const scene = new THREE.Scene()
@@ -89,6 +90,9 @@ const soundManager = new SoundManager()
 // Achievement system
 const achievementManager = new AchievementManager()
 
+// Daily challenges system
+const dailyChallengeManager = new DailyChallengeManager()
+
 // Particle system for visual effects
 const particleSystem = new ParticleSystem(scene)
 
@@ -117,6 +121,13 @@ app.innerHTML = `
       <div class="stat-item">
         <div class="stat-label">Best</div>
         <div class="stat-value" id="high-score">${highScore}</div>
+      </div>
+    </div>
+
+    <div class="daily-challenges" id="daily-challenges">
+      <h3 class="challenges-title">🎯 Daily Challenges</h3>
+      <div class="challenges-list" id="challenges-list">
+        <!-- Challenges will be populated here -->
       </div>
     </div>
 
@@ -203,6 +214,41 @@ function showAchievementNotification(achievement: Achievement) {
   }, 4000)
 }
 
+// Daily challenge notification system
+function showDailyChallengeNotification(challenge: DailyChallenge) {
+  // Create particle burst for daily challenge completion
+  const centerPosition = new THREE.Vector3(0, 0, 0)
+  particleSystem.createBurst(centerPosition, 0x0077b5, 15) // LinkedIn blue
+
+  // Create notification element
+  const notification = document.createElement('div')
+  notification.className = 'achievement-notification'
+  notification.innerHTML = `
+    <div class="achievement-icon">🎯</div>
+    <div class="achievement-content">
+      <div class="achievement-title">Daily Challenge Complete!</div>
+      <div class="achievement-name">${challenge.title}</div>
+      <div class="achievement-desc">${challenge.description}</div>
+    </div>
+  `
+
+  // Add to DOM
+  document.body.appendChild(notification)
+
+  // Animate in
+  setTimeout(() => notification.classList.add('show'), 100)
+
+  // Remove after 4 seconds
+  setTimeout(() => {
+    notification.classList.remove('show')
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification)
+      }
+    }, 300)
+  }, 4000)
+}
+
 // Update UI
 function updateUI() {
   levelElement.textContent = game.level.toString()
@@ -238,6 +284,48 @@ function updateUI() {
   statusElement.style.background = ''
   statusElement.style.color = ''
   statusElement.style.borderColor = ''
+
+  // Update daily challenges display
+  updateDailyChallenges()
+}
+
+// Update daily challenges display
+function updateDailyChallenges() {
+  const challengesList = document.getElementById('challenges-list')
+  if (!challengesList) return
+
+  const activeChallenges = dailyChallengeManager.getActiveChallenges()
+
+  if (activeChallenges.length === 0) {
+    challengesList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); font-size: 0.875rem; margin: 1rem 0;">All daily challenges completed! 🎉</p>'
+    return
+  }
+
+  challengesList.innerHTML = activeChallenges.map(challenge => {
+    const isCompleted = challenge.completed
+
+    return `
+      <div class="challenge-item ${isCompleted ? 'completed' : ''}">
+        <div class="challenge-icon">${getChallengeIcon(challenge.objective.type)}</div>
+        <div class="challenge-content">
+          <div class="challenge-title">${challenge.title}</div>
+          <div class="challenge-desc">${challenge.description}</div>
+          <div class="challenge-progress">${challenge.progress}/${challenge.objective.target}</div>
+        </div>
+      </div>
+    `
+  }).join('')
+}
+
+function getChallengeIcon(type: string): string {
+  switch (type) {
+    case 'score': return '🎯'
+    case 'level': return '🏆'
+    case 'combo': return '🔥'
+    case 'perfect': return '💎'
+    case 'speed': return '⚡'
+    default: return '🎮'
+  }
 }
 
 // Raycaster for mouse clicks
@@ -290,8 +378,18 @@ function highlightCube(index: number, color: number, duration: number = 500) {
   }
 }
 
-// Handle pointer events (mouse and touch)
-function onPointerEvent(event: MouseEvent | TouchEvent) {
+// Handle mouse click
+function onMouseClick(event: MouseEvent) {
+  handlePointerEvent(event)
+}
+
+// Handle touch start
+function onTouchStart(event: any) {
+  handlePointerEvent(event)
+}
+
+// Unified pointer event handler
+function handlePointerEvent(event: any) {
   if (game.gameState !== 'input') return
 
   // Prevent default touch behavior
@@ -341,9 +439,13 @@ function onPointerEvent(event: MouseEvent | TouchEvent) {
         currentStreak: 0 // Reset streak on loss
       })
 
-      // Update high score if needed
-      if (currentScore > highScore) {
-        highScore = currentScore
+      // Update daily challenges
+      const completedDailyChallenges = dailyChallengeManager.updateProgress('score', currentScore)
+      if (completedDailyChallenges.length > 0) {
+        soundManager.playAchievement()
+        setTimeout(() => {
+          showDailyChallengeNotification(completedDailyChallenges[0])
+        }, 500)
       }
 
       statusElement.textContent = `Game Over! Final Score: ${currentScore}`
@@ -376,11 +478,24 @@ function onPointerEvent(event: MouseEvent | TouchEvent) {
         maxCombo: Math.max(achievementManager.getStats().maxCombo, maxCombo)
       })
 
+      // Update daily challenges for level completion
+      const completedLevelChallenges = dailyChallengeManager.updateProgress('level', game.level)
+      const completedComboChallenges = dailyChallengeManager.updateProgress('combo', maxCombo)
+
       // Show achievement notification if any were unlocked
       if (newAchievements.length > 0) {
         soundManager.playAchievement()
         setTimeout(() => {
           showAchievementNotification(newAchievements[0])
+        }, 500)
+      }
+
+      // Show daily challenge notifications
+      const allCompletedChallenges = [...completedLevelChallenges, ...completedComboChallenges]
+      if (allCompletedChallenges.length > 0) {
+        soundManager.playAchievement()
+        setTimeout(() => {
+          showDailyChallengeNotification(allCompletedChallenges[0])
         }, 500)
       }
 
@@ -476,8 +591,8 @@ animate()
 
 // Event listeners
 // Add event listeners for both mouse and touch
-renderer.domElement.addEventListener('click', onPointerEvent)
-renderer.domElement.addEventListener('touchstart', onPointerEvent)
+renderer.domElement.addEventListener('click', onMouseClick)
+renderer.domElement.addEventListener('touchstart', onTouchStart)
 
 startBtn.addEventListener('click', startGame)
 restartBtn.addEventListener('click', () => {

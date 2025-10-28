@@ -396,16 +396,91 @@ body {
   }
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Daily Challenges */
+.daily-challenges {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 1.5rem 0;
+}
+
+.challenges-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem 0;
+  text-align: center;
+}
+
+.challenges-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.challenge-item {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.challenge-item:hover {
+  border-color: var(--linkedin-blue);
+  box-shadow: var(--shadow);
+}
+
+.challenge-item.completed {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  border-color: #28a745;
+  color: white;
+}
+
+.challenge-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.challenge-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.challenge-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.challenge-item.completed .challenge-title {
+  color: white;
+}
+
+.challenge-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.challenge-item.completed .challenge-desc {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.challenge-progress {
+  font-size: 0.75rem;
+  color: var(--linkedin-blue);
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+.challenge-item.completed .challenge-progress {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .game-container {
