@@ -9,7 +9,7 @@ import { ParticleSystem } from './particles'
 const scene = new THREE.Scene()
 
 // Create camera
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000) // Start with 1:1 aspect ratio
 camera.position.z = 5
 
 // Create renderer with better settings
@@ -18,7 +18,6 @@ const renderer = new THREE.WebGLRenderer({
   alpha: true,
   powerPreference: "high-performance"
 })
-renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.setClearColor(0x000000, 0) // transparent background
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -148,6 +147,17 @@ app.innerHTML = `
 // Get canvas wrapper and add renderer
 const canvasWrapper = document.getElementById('canvas-wrapper')!
 canvasWrapper.appendChild(renderer.domElement)
+
+// Initialize renderer size based on canvas wrapper
+const initRendererSize = () => {
+  const rect = canvasWrapper.getBoundingClientRect()
+  const width = rect.width
+  const height = rect.height
+  camera.aspect = width / height
+  camera.updateProjectionMatrix()
+  renderer.setSize(width, height)
+}
+initRendererSize()
 
 // Get UI elements
 const levelElement = document.getElementById('level')!
@@ -280,14 +290,28 @@ function highlightCube(index: number, color: number, duration: number = 500) {
   }
 }
 
-// Handle mouse click
-function onMouseClick(event: MouseEvent) {
+// Handle pointer events (mouse and touch)
+function onPointerEvent(event: MouseEvent | TouchEvent) {
   if (game.gameState !== 'input') return
 
-  // Calculate mouse position in normalized device coordinates
+  // Prevent default touch behavior
+  event.preventDefault()
+
+  // Get coordinates from either mouse or touch event
+  let clientX: number, clientY: number
+  if ('changedTouches' in event) {
+    const touch = event.changedTouches[0]
+    clientX = touch.clientX
+    clientY = touch.clientY
+  } else {
+    clientX = event.clientX
+    clientY = event.clientY
+  }
+
+  // Calculate pointer position in normalized device coordinates
   const rect = renderer.domElement.getBoundingClientRect()
-  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+  mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1
+  mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1
 
   // Update the picking ray with the camera and mouse position
   raycaster.setFromCamera(mouse, camera)
@@ -451,7 +475,9 @@ function animate() {
 animate()
 
 // Event listeners
-renderer.domElement.addEventListener('click', onMouseClick)
+// Add event listeners for both mouse and touch
+renderer.domElement.addEventListener('click', onPointerEvent)
+renderer.domElement.addEventListener('touchstart', onPointerEvent)
 
 startBtn.addEventListener('click', startGame)
 restartBtn.addEventListener('click', () => {
@@ -469,9 +495,14 @@ soundBtn.addEventListener('click', () => {
 
 // Handle window resize
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight
+  const canvasWrapper = document.getElementById('canvas-wrapper')!
+  const rect = canvasWrapper.getBoundingClientRect()
+  const width = rect.width
+  const height = rect.height
+
+  camera.aspect = width / height
   camera.updateProjectionMatrix()
-  renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.setSize(width, height)
 })
 
 // Initialize
