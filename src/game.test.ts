@@ -58,13 +58,20 @@ describe('Game', () => {
     expect(game.gameState).toBe('waiting')
   })
 
-  it('should start game and generate sequence', () => {
+  it('should start game and generate sequence', async () => {
+    vi.useFakeTimers()
     const game = new Game()
     game.level = 2
     const mockHighlight = vi.fn()
     const mockOnComplete = vi.fn()
     game.startGame(mockHighlight, mockOnComplete)
     expect(game.sequence.length).toBe(2)
-    // Since showSequence uses setTimeout, we can't easily test the calls, but sequence is set
+
+    // Fast-forward timers to trigger the setTimeout callback
+    await vi.advanceTimersByTimeAsync(1600 + 800) // sequence.length * 800 + 800
+
+    expect(mockOnComplete).toHaveBeenCalled()
+    expect(game.gameState).toBe('input')
+    vi.useRealTimers()
   })
 })
