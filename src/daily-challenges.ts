@@ -1,5 +1,5 @@
 // Type declarations for browser environment
-declare const window: any
+declare const window: { localStorage?: { getItem: (key: string) => string | null, setItem: (key: string, value: string) => void } }
 
 export interface DailyChallenge {
   id: string
@@ -55,7 +55,7 @@ export class DailyChallengeManager {
             completed: c.completed,
             progress: c.progress
           }))
-        } catch (e) {
+        } catch {
           // Silently fail for loading errors
         }
       }

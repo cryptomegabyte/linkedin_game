@@ -1,6 +1,6 @@
 // Sound Manager for game audio feedback
 export class SoundManager {
-  private audioContext: AudioContext | null = null
+  private audioContext: typeof window.AudioContext.prototype | null = null
   private enabled: boolean = true
 
   constructor() {

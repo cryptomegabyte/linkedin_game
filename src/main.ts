@@ -384,11 +384,14 @@ function onMouseClick(event: MouseEvent) {
 }
 
 // Handle touch start
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function onTouchStart(event: any) {
-  handlePointerEvent(event)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handlePointerEvent(event as any)
 }
 
 // Unified pointer event handler
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function handlePointerEvent(event: any) {
   if (game.gameState !== 'input') return
 

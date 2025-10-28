@@ -1,3 +1,9 @@
+// Type declarations for browser environment
+declare const localStorage: {
+  getItem: (key: string) => string | null
+  setItem: (key: string, value: string) => void
+}
+
 // Achievement system for game milestones
 export interface Achievement {
   id: string
